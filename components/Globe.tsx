@@ -1,11 +1,12 @@
 "use client";
 
 import { useEffect, useRef, useState, useCallback } from "react";
-import { GeoEvent, DisasterEvent, NewsEvent, ConflictEvent } from "@/lib/types";
+import { GeoEvent, DisasterEvent, NewsEvent, ConflictEvent, FireDetection } from "@/lib/types";
 
 let maplibregl: any = null;
 let DeckOverlay: any = null;
 let ScatterplotLayer: any = null;
+let HeatmapLayer: any = null;
 
 function magnitudeToColor(mag: number): [number, number, number, number] {
   const t = Math.min(Math.max((mag - 4.5) / 4, 0), 1);
@@ -64,6 +65,9 @@ interface GlobeProps {
   conflicts: ConflictEvent[];
   conflictsVisible: boolean;
   conflictTypeFilter: string[];
+  fires: FireDetection[];
+  firesVisible: boolean;
+  fireIntensity: number;
 }
 
 export default function Globe({
@@ -72,6 +76,7 @@ export default function Globe({
   news, newsVisible,
   conflicts, conflictsVisible,
   conflictTypeFilter,
+  fires, firesVisible, fireIntensity,
 }: GlobeProps) {
   const containerRef = useRef<HTMLDivElement>(null);
   const mapRef = useRef<any>(null);
@@ -85,9 +90,11 @@ export default function Globe({
       const mgl = await import("maplibre-gl");
       const deckMapbox = await import("@deck.gl/mapbox");
       const deckLayers = await import("@deck.gl/layers");
+      const deckAgg = await import("@deck.gl/aggregation-layers");
       maplibregl = mgl.default || mgl;
       DeckOverlay = deckMapbox.MapboxOverlay;
       ScatterplotLayer = deckLayers.ScatterplotLayer;
+      HeatmapLayer = deckAgg.HeatmapLayer;
       if (cancelled || !containerRef.current) return;
       const map = new maplibregl.Map({
         container: containerRef.current,
@@ -111,6 +118,26 @@ export default function Globe({
     if (!loaded || !deckRef.current || !ScatterplotLayer) return;
 
     const layers: any[] = [];
+
+    if (firesVisible && HeatmapLayer && fires.length > 0) {
+      layers.push(new HeatmapLayer({
+        id: "fires-heatmap",
+        data: fires,
+        getPosition: (d: FireDetection) => [d.longitude, d.latitude],
+        getWeight: (d: FireDetection) => d.frp || 1,
+        radiusPixels: 30,
+        intensity: fireIntensity,
+        threshold: 0.1,
+        opacity: 0.7,
+        colorRange: [
+          [255, 255, 178],
+          [254, 204, 92],
+          [253, 141, 60],
+          [240, 59, 32],
+          [189, 0, 38],
+        ],
+      }));
+    }
 
     if (newsVisible) {
       layers.push(new ScatterplotLayer({
@@ -227,7 +254,7 @@ export default function Globe({
     }
 
     deckRef.current.setProps({ layers });
-  }, [earthquakes, earthquakesVisible, disasters, disastersVisible, news, newsVisible, conflicts, conflictsVisible, conflictTypeFilter, loaded]);
+  }, [earthquakes, earthquakesVisible, disasters, disastersVisible, news, newsVisible, conflicts, conflictsVisible, conflictTypeFilter, fires, firesVisible, fireIntensity, loaded]);
 
   return (
     <div className="relative w-full h-full">

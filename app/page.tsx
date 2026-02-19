@@ -1,11 +1,12 @@
 "use client";
 
 import { useState, useEffect, useCallback } from "react";
-import { GeoEvent, DisasterEvent, NewsEvent, ConflictEvent } from "@/lib/types";
+import { GeoEvent, DisasterEvent, NewsEvent, ConflictEvent, FireDetection } from "@/lib/types";
 import { fetchEarthquakes } from "@/lib/fetchers/usgs";
 import { fetchDisasters } from "@/lib/fetchers/gdacs";
 import { fetchNews } from "@/lib/fetchers/gdelt";
 import { fetchConflicts } from "@/lib/fetchers/acled";
+import { fetchFires } from "@/lib/fetchers/firms";
 import LayerPanel from "@/components/LayerPanel";
 import nextDynamic from "next/dynamic";
 
@@ -40,7 +41,18 @@ export default function Home() {
   const [conflictsVisible, setConflictsVisible] = useState(true);
   const [conflictTypeFilter, setConflictTypeFilter] = useState<string[]>([...ALL_CONFLICT_TYPES]);
 
+  const [fires, setFires] = useState<FireDetection[]>([]);
+  const [firesVisible, setFiresVisible] = useState(true);
+  const [fireConfidenceFilter, setFireConfidenceFilter] = useState("nominal");
+  const [fireIntensity, setFireIntensity] = useState(1);
+
   const filteredEarthquakes = earthquakes.filter((e) => e.magnitude >= minMagnitude);
+
+  const filteredFires = fires.filter((f) => {
+    if (fireConfidenceFilter === "high") return f.confidence === "h";
+    if (fireConfidenceFilter === "nominal") return f.confidence === "h" || f.confidence === "n";
+    return true;
+  });
 
   const loadEarthquakes = useCallback(async () => {
     try {
@@ -64,6 +76,12 @@ export default function Home() {
     try {
       setConflicts(await fetchConflicts(window.location.origin));
     } catch (e) { console.error("Failed to fetch conflicts:", e); }
+  }, []);
+
+  const loadFires = useCallback(async () => {
+    try {
+      setFires(await fetchFires(window.location.origin));
+    } catch (e) { console.error("Failed to fetch fires:", e); }
   }, []);
 
   useEffect(() => {
@@ -90,6 +108,12 @@ export default function Home() {
     return () => clearInterval(i);
   }, [loadConflicts]);
 
+  useEffect(() => {
+    loadFires();
+    const i = setInterval(loadFires, REFRESH_1H);
+    return () => clearInterval(i);
+  }, [loadFires]);
+
   return (
     <main className="relative w-screen h-screen overflow-hidden bg-[#0a0a0a]">
       <Globe
@@ -102,6 +126,9 @@ export default function Home() {
         conflicts={conflicts.filter(c => conflictTypeFilter.includes(c.eventType))}
         conflictsVisible={conflictsVisible}
         conflictTypeFilter={conflictTypeFilter}
+        fires={filteredFires}
+        firesVisible={firesVisible}
+        fireIntensity={fireIntensity}
       />
 
       <div className="absolute top-4 left-4 z-10">
@@ -130,6 +157,13 @@ export default function Home() {
         conflictTypeFilter={conflictTypeFilter}
         onConflictTypeFilterChange={setConflictTypeFilter}
         allConflictTypes={ALL_CONFLICT_TYPES}
+        firesVisible={firesVisible}
+        onToggleFires={() => setFiresVisible((v) => !v)}
+        fireCount={filteredFires.length}
+        fireConfidenceFilter={fireConfidenceFilter}
+        onFireConfidenceFilterChange={setFireConfidenceFilter}
+        fireIntensity={fireIntensity}
+        onFireIntensityChange={setFireIntensity}
       />
     </main>
   );

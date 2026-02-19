@@ -22,6 +22,13 @@ interface LayerPanelProps {
   conflictTypeFilter: string[];
   onConflictTypeFilterChange: (value: string[]) => void;
   allConflictTypes: string[];
+  firesVisible: boolean;
+  onToggleFires: () => void;
+  fireCount: number;
+  fireConfidenceFilter: string;
+  onFireConfidenceFilterChange: (value: string) => void;
+  fireIntensity: number;
+  onFireIntensityChange: (value: number) => void;
 }
 
 const MAGNITUDE_STEPS = [4.5, 5.0, 5.5, 6.0, 6.5, 7.0];
@@ -64,6 +71,15 @@ export default function LayerPanel(props: LayerPanelProps) {
         typeFilter={props.conflictTypeFilter}
         onTypeFilterChange={props.onConflictTypeFilterChange}
         allTypes={props.allConflictTypes}
+      />
+      <FireLayer
+        visible={props.firesVisible}
+        onToggle={props.onToggleFires}
+        eventCount={props.fireCount}
+        confidenceFilter={props.fireConfidenceFilter}
+        onConfidenceFilterChange={props.onFireConfidenceFilterChange}
+        intensity={props.fireIntensity}
+        onIntensityChange={props.onFireIntensityChange}
       />
     </div>
   );
@@ -197,6 +213,52 @@ function ConflictLayer({ visible, onToggle, eventCount, typeFilter, onTypeFilter
             {shortLabels[t] || t}
           </label>
         ))}
+      </div>
+    </LayerToggle>
+  );
+}
+
+const CONFIDENCE_OPTIONS = [
+  { label: "All", value: "all" },
+  { label: "Nominal+", value: "nominal" },
+  { label: "High only", value: "high" },
+];
+
+function FireLayer({ visible, onToggle, eventCount, confidenceFilter, onConfidenceFilterChange, intensity, onIntensityChange }: {
+  visible: boolean; onToggle: () => void; eventCount: number;
+  confidenceFilter: string; onConfidenceFilterChange: (v: string) => void;
+  intensity: number; onIntensityChange: (v: number) => void;
+}) {
+  return (
+    <LayerToggle visible={visible} onToggle={onToggle} label="🔥 Wildfires" eventCount={eventCount} accentColor="accent-red-500">
+      <div className="text-xs text-white/50 mb-1">Confidence</div>
+      <div className="flex gap-1 mb-3">
+        {CONFIDENCE_OPTIONS.map((opt) => (
+          <button
+            key={opt.value}
+            onClick={() => onConfidenceFilterChange(opt.value)}
+            className={`text-[10px] px-2 py-0.5 rounded ${
+              confidenceFilter === opt.value
+                ? "bg-red-500/30 text-red-300"
+                : "bg-white/5 text-white/40 hover:text-white/60"
+            } transition-colors`}
+          >
+            {opt.label}
+          </button>
+        ))}
+      </div>
+      <div className="flex items-center justify-between text-xs text-white/50 mb-1">
+        <span>Intensity</span>
+        <span className="text-red-400 font-mono">{intensity.toFixed(1)}</span>
+      </div>
+      <input
+        type="range" min={5} max={30} step={1}
+        value={intensity * 10}
+        onChange={(e) => onIntensityChange(parseInt(e.target.value) / 10)}
+        className="w-full h-1 bg-white/10 rounded-full appearance-none cursor-pointer accent-red-500"
+      />
+      <div className="flex justify-between text-[10px] text-white/30 mt-0.5">
+        <span>0.5</span><span>3.0</span>
       </div>
     </LayerToggle>
   );

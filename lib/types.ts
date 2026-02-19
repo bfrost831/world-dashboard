@@ -32,6 +32,16 @@ export interface NewsEvent {
   count?: number;
 }
 
+export interface FireDetection {
+  latitude: number;
+  longitude: number;
+  frp: number;
+  confidence: string;
+  acq_date: string;
+  acq_time: string;
+  daynight: string;
+}
+
 export interface ConflictEvent {
   id: string;
   eventType: string;
