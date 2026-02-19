@@ -86,14 +86,16 @@ function LayerToggle({
             {eventCount}
           </span>
         </label>
-        {visible && children && (
+        {visible && children ? (
           <button
             onClick={() => setExpanded((v) => !v)}
-            className="text-white/30 hover:text-white/60 transition-colors text-base px-1"
+            className="text-white/30 hover:text-white/60 transition-colors text-base px-1 w-5 text-center"
             title={expanded ? "Collapse" : "Expand settings"}
           >
             {expanded ? "▾" : "▸"}
           </button>
+        ) : (
+          <span className="w-5" />
         )}
       </div>
       {visible && expanded && children && (
