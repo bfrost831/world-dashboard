@@ -13,7 +13,7 @@ const REFRESH_INTERVAL = 5 * 60 * 1000;
 export default function Home() {
   const [earthquakes, setEarthquakes] = useState<GeoEvent[]>([]);
   const [earthquakesVisible, setEarthquakesVisible] = useState(true);
-  const [minMagnitude, setMinMagnitude] = useState(4.5);
+  const [minMagnitude, setMinMagnitude] = useState(6.0);
 
   const filteredEarthquakes = earthquakes.filter(
     (e) => e.magnitude >= minMagnitude
