@@ -5,9 +5,20 @@ export async function GET(request: Request) {
   try {
     const { searchParams } = new URL(request.url);
     const timespan = searchParams.get("timespan") || "24h";
-    const url = `https://api.gdeltproject.org/api/v2/geo/geo?query=world&mode=PointData&format=GeoJSON&timespan=${timespan}&maxrows=500`;
+    // GDELT timespan format: Xmin, Xh, or Xd
+    const timespanMap: Record<string, string> = {
+      "1h": "60min",
+      "6h": "360min",
+      "24h": "1440min",
+      "48h": "2880min",
+    };
+    const gdeltTimespan = timespanMap[timespan] || "1440min";
+    const url = `https://api.gdeltproject.org/api/v2/geo/geo?query=world&mode=PointData&format=GeoJSON&timespan=${gdeltTimespan}&maxrows=500`;
 
-    const res = await fetch(url, { next: { revalidate: 900 } });
+    const controller = new AbortController();
+    const timeout = setTimeout(() => controller.abort(), 15000);
+    const res = await fetch(url, { next: { revalidate: 900 }, signal: controller.signal });
+    clearTimeout(timeout);
     const data = await res.json();
 
     const features = data.features ?? [];
