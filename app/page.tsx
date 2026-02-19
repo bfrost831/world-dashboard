@@ -13,6 +13,11 @@ const REFRESH_INTERVAL = 5 * 60 * 1000;
 export default function Home() {
   const [earthquakes, setEarthquakes] = useState<GeoEvent[]>([]);
   const [earthquakesVisible, setEarthquakesVisible] = useState(true);
+  const [minMagnitude, setMinMagnitude] = useState(4.5);
+
+  const filteredEarthquakes = earthquakes.filter(
+    (e) => e.magnitude >= minMagnitude
+  );
 
   const loadData = useCallback(async () => {
     try {
@@ -32,7 +37,7 @@ export default function Home() {
   return (
     <main className="relative w-screen h-screen overflow-hidden bg-[#0a0a0a]">
       <Globe
-        earthquakes={earthquakes}
+        earthquakes={filteredEarthquakes}
         earthquakesVisible={earthquakesVisible}
       />
 
@@ -47,7 +52,9 @@ export default function Home() {
       <LayerPanel
         earthquakesVisible={earthquakesVisible}
         onToggleEarthquakes={() => setEarthquakesVisible((v) => !v)}
-        eventCount={earthquakes.length}
+        eventCount={filteredEarthquakes.length}
+        minMagnitude={minMagnitude}
+        onMinMagnitudeChange={setMinMagnitude}
       />
     </main>
   );
