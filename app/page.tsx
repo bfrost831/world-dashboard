@@ -32,6 +32,8 @@ export default function Home() {
 
   const [disasters, setDisasters] = useState<DisasterEvent[]>([]);
   const [disastersVisible, setDisastersVisible] = useState(true);
+  const [disasterAlertFilter, setDisasterAlertFilter] = useState<string[]>(["Green", "Orange", "Red"]);
+  const [disasterTypeFilter, setDisasterTypeFilter] = useState<string[]>(["TC", "FL", "VO", "DR", "WF"]);
 
   const [news, setNews] = useState<NewsEvent[]>([]);
   const [newsVisible, setNewsVisible] = useState(true);
@@ -47,6 +49,10 @@ export default function Home() {
   const [fireIntensity, setFireIntensity] = useState(1);
 
   const filteredEarthquakes = earthquakes.filter((e) => e.magnitude >= minMagnitude);
+
+  const filteredDisasters = disasters.filter(
+    (d) => disasterAlertFilter.includes(d.alertLevel) && disasterTypeFilter.includes(d.type)
+  );
 
   const filteredFires = fires.filter((f) => {
     if (fireConfidenceFilter === "high") return f.confidence === "h";
@@ -119,7 +125,7 @@ export default function Home() {
       <Globe
         earthquakes={filteredEarthquakes}
         earthquakesVisible={earthquakesVisible}
-        disasters={disasters}
+        disasters={filteredDisasters}
         disastersVisible={disastersVisible}
         news={news}
         newsVisible={newsVisible}
@@ -145,7 +151,11 @@ export default function Home() {
         onMinMagnitudeChange={setMinMagnitude}
         disastersVisible={disastersVisible}
         onToggleDisasters={() => setDisastersVisible((v) => !v)}
-        disasterCount={disasters.length}
+        disasterCount={filteredDisasters.length}
+        disasterAlertFilter={disasterAlertFilter}
+        onDisasterAlertFilterChange={setDisasterAlertFilter}
+        disasterTypeFilter={disasterTypeFilter}
+        onDisasterTypeFilterChange={setDisasterTypeFilter}
         newsVisible={newsVisible}
         onToggleNews={() => setNewsVisible((v) => !v)}
         newsCount={news.length}

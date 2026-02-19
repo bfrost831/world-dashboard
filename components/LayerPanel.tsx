@@ -11,6 +11,10 @@ interface LayerPanelProps {
   disastersVisible: boolean;
   onToggleDisasters: () => void;
   disasterCount: number;
+  disasterAlertFilter: string[];
+  onDisasterAlertFilterChange: (value: string[]) => void;
+  disasterTypeFilter: string[];
+  onDisasterTypeFilterChange: (value: string[]) => void;
   firesVisible: boolean;
   onToggleFires: () => void;
   fireCount: number;
@@ -61,6 +65,10 @@ export default function LayerPanel(props: LayerPanelProps) {
         disastersVisible={props.disastersVisible}
         onToggleDisasters={props.onToggleDisasters}
         disasterCount={props.disasterCount}
+        alertFilter={props.disasterAlertFilter}
+        onAlertFilterChange={props.onDisasterAlertFilterChange}
+        disasterTypeFilter={props.disasterTypeFilter}
+        onDisasterTypeFilterChange={props.onDisasterTypeFilterChange}
         firesVisible={props.firesVisible}
         onToggleFires={props.onToggleFires}
         fireCount={props.fireCount}
@@ -154,11 +162,15 @@ function EarthquakeLayer({ visible, onToggle, eventCount, minMagnitude, onMinMag
 
 function DisasterGroup({
   disastersVisible, onToggleDisasters, disasterCount,
+  alertFilter, onAlertFilterChange,
+  disasterTypeFilter, onDisasterTypeFilterChange,
   firesVisible, onToggleFires, fireCount,
   fireConfidenceFilter, onFireConfidenceFilterChange,
   fireIntensity, onFireIntensityChange,
 }: {
   disastersVisible: boolean; onToggleDisasters: () => void; disasterCount: number;
+  alertFilter: string[]; onAlertFilterChange: (v: string[]) => void;
+  disasterTypeFilter: string[]; onDisasterTypeFilterChange: (v: string[]) => void;
   firesVisible: boolean; onToggleFires: () => void; fireCount: number;
   fireConfidenceFilter: string; onFireConfidenceFilterChange: (v: string) => void;
   fireIntensity: number; onFireIntensityChange: (v: number) => void;
@@ -200,15 +212,15 @@ function DisasterGroup({
       {expanded && (
         <div className="mt-2 pl-4 space-y-2 border-l border-white/5 ml-2">
           {/* GDACS Alerts sub-layer */}
-          <div className="flex items-center gap-2 text-xs text-white/60">
-            <label className="flex items-center gap-2 cursor-pointer hover:text-white/80 flex-1">
-              <input type="checkbox" checked={disastersVisible} onChange={onToggleDisasters} className="accent-green-500 scale-90" />
-              Alerts (GDACS)
-              <span className="ml-auto text-[10px] bg-white/10 rounded-full px-1.5 py-0.5 text-white/40">
-                {disasterCount}
-              </span>
-            </label>
-          </div>
+          <GdacsSublayer
+            visible={disastersVisible}
+            onToggle={onToggleDisasters}
+            count={disasterCount}
+            alertFilter={alertFilter}
+            onAlertFilterChange={onAlertFilterChange}
+            typeFilter={disasterTypeFilter}
+            onTypeFilterChange={onDisasterTypeFilterChange}
+          />
 
           {/* Wildfires sub-layer */}
           <WildfireSublayer
@@ -220,6 +232,111 @@ function DisasterGroup({
             intensity={fireIntensity}
             onIntensityChange={onFireIntensityChange}
           />
+        </div>
+      )}
+    </div>
+  );
+}
+
+const ALERT_LEVELS = ["Green", "Orange", "Red"];
+const DISASTER_TYPES = [
+  { code: "TC", label: "Cyclones" },
+  { code: "FL", label: "Floods" },
+  { code: "VO", label: "Volcanoes" },
+  { code: "DR", label: "Droughts" },
+  { code: "WF", label: "Wildfires" },
+];
+const ALERT_COLORS: Record<string, string> = {
+  Green: "bg-green-500",
+  Orange: "bg-orange-500",
+  Red: "bg-red-500",
+};
+
+function GdacsSublayer({
+  visible, onToggle, count,
+  alertFilter, onAlertFilterChange,
+  typeFilter, onTypeFilterChange,
+}: {
+  visible: boolean; onToggle: () => void; count: number;
+  alertFilter: string[]; onAlertFilterChange: (v: string[]) => void;
+  typeFilter: string[]; onTypeFilterChange: (v: string[]) => void;
+}) {
+  const [expanded, setExpanded] = useState(false);
+
+  const toggleAlert = (level: string) => {
+    if (alertFilter.includes(level)) {
+      onAlertFilterChange(alertFilter.filter((x) => x !== level));
+    } else {
+      onAlertFilterChange([...alertFilter, level]);
+    }
+  };
+
+  const toggleType = (code: string) => {
+    if (typeFilter.includes(code)) {
+      onTypeFilterChange(typeFilter.filter((x) => x !== code));
+    } else {
+      onTypeFilterChange([...typeFilter, code]);
+    }
+  };
+
+  return (
+    <div>
+      <div className="flex items-center gap-2 text-xs text-white/60">
+        <label className="flex items-center gap-2 cursor-pointer hover:text-white/80 flex-1">
+          <input type="checkbox" checked={visible} onChange={onToggle} className="accent-green-500 scale-90" />
+          Alerts (GDACS)
+          <span className="ml-auto text-[10px] bg-white/10 rounded-full px-1.5 py-0.5 text-white/40">
+            {count}
+          </span>
+        </label>
+        {visible ? (
+          <button
+            onClick={() => setExpanded((v) => !v)}
+            className="text-white/30 hover:text-white/60 transition-colors text-xs px-1 w-4 text-center"
+          >
+            {expanded ? "▾" : "▸"}
+          </button>
+        ) : (
+          <span className="w-4" />
+        )}
+      </div>
+      {visible && expanded && (
+        <div className="mt-2 pl-5 space-y-2">
+          <div>
+            <div className="text-[10px] text-white/40 mb-1">Alert level</div>
+            <div className="flex gap-1">
+              {ALERT_LEVELS.map((level) => (
+                <button
+                  key={level}
+                  onClick={() => toggleAlert(level)}
+                  className={`text-[10px] px-1.5 py-0.5 rounded flex items-center gap-1 ${
+                    alertFilter.includes(level)
+                      ? "bg-white/10 text-white/80"
+                      : "bg-white/5 text-white/30"
+                  } transition-colors`}
+                >
+                  <span className={`w-1.5 h-1.5 rounded-full ${ALERT_COLORS[level]}`} />
+                  {level}
+                </button>
+              ))}
+            </div>
+          </div>
+          <div>
+            <div className="text-[10px] text-white/40 mb-1">Event type</div>
+            <div className="space-y-0.5">
+              {DISASTER_TYPES.map(({ code, label }) => (
+                <label key={code} className="flex items-center gap-2 text-[10px] text-white/50 cursor-pointer hover:text-white/70">
+                  <input
+                    type="checkbox"
+                    checked={typeFilter.includes(code)}
+                    onChange={() => toggleType(code)}
+                    className="accent-green-500 scale-75"
+                  />
+                  {label}
+                </label>
+              ))}
+            </div>
+          </div>
         </div>
       )}
     </div>
