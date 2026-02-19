@@ -11,6 +11,13 @@ interface LayerPanelProps {
   disastersVisible: boolean;
   onToggleDisasters: () => void;
   disasterCount: number;
+  firesVisible: boolean;
+  onToggleFires: () => void;
+  fireCount: number;
+  fireConfidenceFilter: string;
+  onFireConfidenceFilterChange: (value: string) => void;
+  fireIntensity: number;
+  onFireIntensityChange: (value: number) => void;
   newsVisible: boolean;
   onToggleNews: () => void;
   newsCount: number;
@@ -22,13 +29,6 @@ interface LayerPanelProps {
   conflictTypeFilter: string[];
   onConflictTypeFilterChange: (value: string[]) => void;
   allConflictTypes: string[];
-  firesVisible: boolean;
-  onToggleFires: () => void;
-  fireCount: number;
-  fireConfidenceFilter: string;
-  onFireConfidenceFilterChange: (value: string) => void;
-  fireIntensity: number;
-  onFireIntensityChange: (value: number) => void;
 }
 
 const MAGNITUDE_STEPS = [4.5, 5.0, 5.5, 6.0, 6.5, 7.0];
@@ -37,6 +37,11 @@ const TIMESPAN_OPTIONS = [
   { label: "6h", value: "6h" },
   { label: "24h", value: "24h" },
   { label: "48h", value: "48h" },
+];
+const CONFIDENCE_OPTIONS = [
+  { label: "All", value: "all" },
+  { label: "Nominal+", value: "nominal" },
+  { label: "High only", value: "high" },
 ];
 
 export default function LayerPanel(props: LayerPanelProps) {
@@ -52,10 +57,17 @@ export default function LayerPanel(props: LayerPanelProps) {
         minMagnitude={props.minMagnitude}
         onMinMagnitudeChange={props.onMinMagnitudeChange}
       />
-      <DisasterLayer
-        visible={props.disastersVisible}
-        onToggle={props.onToggleDisasters}
-        eventCount={props.disasterCount}
+      <DisasterGroup
+        disastersVisible={props.disastersVisible}
+        onToggleDisasters={props.onToggleDisasters}
+        disasterCount={props.disasterCount}
+        firesVisible={props.firesVisible}
+        onToggleFires={props.onToggleFires}
+        fireCount={props.fireCount}
+        fireConfidenceFilter={props.fireConfidenceFilter}
+        onFireConfidenceFilterChange={props.onFireConfidenceFilterChange}
+        fireIntensity={props.fireIntensity}
+        onFireIntensityChange={props.onFireIntensityChange}
       />
       <NewsLayer
         visible={props.newsVisible}
@@ -72,26 +84,19 @@ export default function LayerPanel(props: LayerPanelProps) {
         onTypeFilterChange={props.onConflictTypeFilterChange}
         allTypes={props.allConflictTypes}
       />
-      <FireLayer
-        visible={props.firesVisible}
-        onToggle={props.onToggleFires}
-        eventCount={props.fireCount}
-        confidenceFilter={props.fireConfidenceFilter}
-        onConfidenceFilterChange={props.onFireConfidenceFilterChange}
-        intensity={props.fireIntensity}
-        onIntensityChange={props.onFireIntensityChange}
-      />
     </div>
   );
 }
 
+/* ── Reusable toggle ── */
+
 function LayerToggle({
-  visible, onToggle, label, eventCount, accentColor, children, defaultExpanded = false,
+  visible, onToggle, label, eventCount, accentColor, children,
 }: {
   visible: boolean; onToggle: () => void; label: string; eventCount: number;
-  accentColor: string; children?: React.ReactNode; defaultExpanded?: boolean;
+  accentColor: string; children?: React.ReactNode;
 }) {
-  const [expanded, setExpanded] = useState(defaultExpanded);
+  const [expanded, setExpanded] = useState(false);
   return (
     <div>
       <div className="flex items-center gap-2 text-sm text-white/80">
@@ -106,7 +111,6 @@ function LayerToggle({
           <button
             onClick={() => setExpanded((v) => !v)}
             className="text-white/30 hover:text-white/60 transition-colors text-base px-1 w-5 text-center"
-            title={expanded ? "Collapse" : "Expand settings"}
           >
             {expanded ? "▾" : "▸"}
           </button>
@@ -115,11 +119,13 @@ function LayerToggle({
         )}
       </div>
       {visible && expanded && children && (
-        <div className="mt-3 pl-6">{children}</div>
+        <div className="mt-2 pl-6">{children}</div>
       )}
     </div>
   );
 }
+
+/* ── Earthquake ── */
 
 function EarthquakeLayer({ visible, onToggle, eventCount, minMagnitude, onMinMagnitudeChange }: {
   visible: boolean; onToggle: () => void; eventCount: number;
@@ -144,13 +150,149 @@ function EarthquakeLayer({ visible, onToggle, eventCount, minMagnitude, onMinMag
   );
 }
 
-function DisasterLayer({ visible, onToggle, eventCount }: {
-  visible: boolean; onToggle: () => void; eventCount: number;
+/* ── Disasters (parent group with sub-layers) ── */
+
+function DisasterGroup({
+  disastersVisible, onToggleDisasters, disasterCount,
+  firesVisible, onToggleFires, fireCount,
+  fireConfidenceFilter, onFireConfidenceFilterChange,
+  fireIntensity, onFireIntensityChange,
+}: {
+  disastersVisible: boolean; onToggleDisasters: () => void; disasterCount: number;
+  firesVisible: boolean; onToggleFires: () => void; fireCount: number;
+  fireConfidenceFilter: string; onFireConfidenceFilterChange: (v: string) => void;
+  fireIntensity: number; onFireIntensityChange: (v: number) => void;
 }) {
+  const [expanded, setExpanded] = useState(false);
+  const totalCount = disasterCount + fireCount;
+  const anyVisible = disastersVisible || firesVisible;
+
+  const toggleAll = () => {
+    if (anyVisible) {
+      onToggleDisasters();
+      if (firesVisible) onToggleFires();
+    } else {
+      if (!disastersVisible) onToggleDisasters();
+      if (!firesVisible) onToggleFires();
+    }
+  };
+
   return (
-    <LayerToggle visible={visible} onToggle={onToggle} label="Disasters" eventCount={eventCount} accentColor="accent-green-500" />
+    <div>
+      {/* Group header */}
+      <div className="flex items-center gap-2 text-sm text-white/80">
+        <label className="flex items-center gap-2 cursor-pointer hover:text-white transition-colors flex-1">
+          <input type="checkbox" checked={anyVisible} onChange={toggleAll} className="accent-green-500" />
+          Disasters
+          <span className="ml-auto text-xs bg-white/10 rounded-full px-2 py-0.5 text-white/50">
+            {totalCount}
+          </span>
+        </label>
+        <button
+          onClick={() => setExpanded((v) => !v)}
+          className="text-white/30 hover:text-white/60 transition-colors text-base px-1 w-5 text-center"
+        >
+          {expanded ? "▾" : "▸"}
+        </button>
+      </div>
+
+      {/* Sub-layers */}
+      {expanded && (
+        <div className="mt-2 pl-4 space-y-2 border-l border-white/5 ml-2">
+          {/* GDACS Alerts sub-layer */}
+          <div className="flex items-center gap-2 text-xs text-white/60">
+            <label className="flex items-center gap-2 cursor-pointer hover:text-white/80 flex-1">
+              <input type="checkbox" checked={disastersVisible} onChange={onToggleDisasters} className="accent-green-500 scale-90" />
+              Alerts (GDACS)
+              <span className="ml-auto text-[10px] bg-white/10 rounded-full px-1.5 py-0.5 text-white/40">
+                {disasterCount}
+              </span>
+            </label>
+          </div>
+
+          {/* Wildfires sub-layer */}
+          <WildfireSublayer
+            visible={firesVisible}
+            onToggle={onToggleFires}
+            count={fireCount}
+            confidenceFilter={fireConfidenceFilter}
+            onConfidenceFilterChange={onFireConfidenceFilterChange}
+            intensity={fireIntensity}
+            onIntensityChange={onFireIntensityChange}
+          />
+        </div>
+      )}
+    </div>
   );
 }
+
+function WildfireSublayer({
+  visible, onToggle, count,
+  confidenceFilter, onConfidenceFilterChange,
+  intensity, onIntensityChange,
+}: {
+  visible: boolean; onToggle: () => void; count: number;
+  confidenceFilter: string; onConfidenceFilterChange: (v: string) => void;
+  intensity: number; onIntensityChange: (v: number) => void;
+}) {
+  const [expanded, setExpanded] = useState(false);
+
+  return (
+    <div>
+      <div className="flex items-center gap-2 text-xs text-white/60">
+        <label className="flex items-center gap-2 cursor-pointer hover:text-white/80 flex-1">
+          <input type="checkbox" checked={visible} onChange={onToggle} className="accent-red-500 scale-90" />
+          🔥 Wildfires
+          <span className="ml-auto text-[10px] bg-white/10 rounded-full px-1.5 py-0.5 text-white/40">
+            {count}
+          </span>
+        </label>
+        {visible ? (
+          <button
+            onClick={() => setExpanded((v) => !v)}
+            className="text-white/30 hover:text-white/60 transition-colors text-xs px-1 w-4 text-center"
+          >
+            {expanded ? "▾" : "▸"}
+          </button>
+        ) : (
+          <span className="w-4" />
+        )}
+      </div>
+      {visible && expanded && (
+        <div className="mt-2 pl-5">
+          <div className="text-[10px] text-white/40 mb-1">Confidence</div>
+          <div className="flex gap-1 mb-2">
+            {CONFIDENCE_OPTIONS.map((opt) => (
+              <button
+                key={opt.value}
+                onClick={() => onConfidenceFilterChange(opt.value)}
+                className={`text-[10px] px-1.5 py-0.5 rounded ${
+                  confidenceFilter === opt.value
+                    ? "bg-red-500/30 text-red-300"
+                    : "bg-white/5 text-white/40 hover:text-white/60"
+                } transition-colors`}
+              >
+                {opt.label}
+              </button>
+            ))}
+          </div>
+          <div className="flex items-center justify-between text-[10px] text-white/40 mb-1">
+            <span>Intensity</span>
+            <span className="text-red-400 font-mono">{intensity.toFixed(1)}</span>
+          </div>
+          <input
+            type="range" min={5} max={30} step={1}
+            value={intensity * 10}
+            onChange={(e) => onIntensityChange(parseInt(e.target.value) / 10)}
+            className="w-full h-1 bg-white/10 rounded-full appearance-none cursor-pointer accent-red-500"
+          />
+        </div>
+      )}
+    </div>
+  );
+}
+
+/* ── News ── */
 
 function NewsLayer({ visible, onToggle, eventCount, timespan, onTimespanChange }: {
   visible: boolean; onToggle: () => void; eventCount: number;
@@ -177,6 +319,8 @@ function NewsLayer({ visible, onToggle, eventCount, timespan, onTimespanChange }
     </LayerToggle>
   );
 }
+
+/* ── Conflicts ── */
 
 function ConflictLayer({ visible, onToggle, eventCount, typeFilter, onTypeFilterChange, allTypes }: {
   visible: boolean; onToggle: () => void; eventCount: number;
@@ -213,52 +357,6 @@ function ConflictLayer({ visible, onToggle, eventCount, typeFilter, onTypeFilter
             {shortLabels[t] || t}
           </label>
         ))}
-      </div>
-    </LayerToggle>
-  );
-}
-
-const CONFIDENCE_OPTIONS = [
-  { label: "All", value: "all" },
-  { label: "Nominal+", value: "nominal" },
-  { label: "High only", value: "high" },
-];
-
-function FireLayer({ visible, onToggle, eventCount, confidenceFilter, onConfidenceFilterChange, intensity, onIntensityChange }: {
-  visible: boolean; onToggle: () => void; eventCount: number;
-  confidenceFilter: string; onConfidenceFilterChange: (v: string) => void;
-  intensity: number; onIntensityChange: (v: number) => void;
-}) {
-  return (
-    <LayerToggle visible={visible} onToggle={onToggle} label="🔥 Wildfires" eventCount={eventCount} accentColor="accent-red-500">
-      <div className="text-xs text-white/50 mb-1">Confidence</div>
-      <div className="flex gap-1 mb-3">
-        {CONFIDENCE_OPTIONS.map((opt) => (
-          <button
-            key={opt.value}
-            onClick={() => onConfidenceFilterChange(opt.value)}
-            className={`text-[10px] px-2 py-0.5 rounded ${
-              confidenceFilter === opt.value
-                ? "bg-red-500/30 text-red-300"
-                : "bg-white/5 text-white/40 hover:text-white/60"
-            } transition-colors`}
-          >
-            {opt.label}
-          </button>
-        ))}
-      </div>
-      <div className="flex items-center justify-between text-xs text-white/50 mb-1">
-        <span>Intensity</span>
-        <span className="text-red-400 font-mono">{intensity.toFixed(1)}</span>
-      </div>
-      <input
-        type="range" min={5} max={30} step={1}
-        value={intensity * 10}
-        onChange={(e) => onIntensityChange(parseInt(e.target.value) / 10)}
-        className="w-full h-1 bg-white/10 rounded-full appearance-none cursor-pointer accent-red-500"
-      />
-      <div className="flex justify-between text-[10px] text-white/30 mt-0.5">
-        <span>0.5</span><span>3.0</span>
       </div>
     </LayerToggle>
   );
