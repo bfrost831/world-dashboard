@@ -1,5 +1,7 @@
 "use client";
 
+import { useState } from "react";
+
 interface LayerPanelProps {
   earthquakesVisible: boolean;
   onToggleEarthquakes: () => void;
@@ -22,19 +24,58 @@ export default function LayerPanel({
       <h3 className="text-xs uppercase tracking-widest text-white/40 mb-3">
         Layers
       </h3>
-      <label className="flex items-center gap-2 cursor-pointer text-sm text-white/80 hover:text-white transition-colors">
-        <input
-          type="checkbox"
-          checked={earthquakesVisible}
-          onChange={onToggleEarthquakes}
-          className="accent-orange-500"
-        />
-        Earthquakes
-        <span className="ml-auto text-xs bg-white/10 rounded-full px-2 py-0.5 text-white/50">
-          {eventCount}
-        </span>
-      </label>
-      {earthquakesVisible && (
+      <EarthquakeLayer
+        visible={earthquakesVisible}
+        onToggle={onToggleEarthquakes}
+        eventCount={eventCount}
+        minMagnitude={minMagnitude}
+        onMinMagnitudeChange={onMinMagnitudeChange}
+      />
+    </div>
+  );
+}
+
+function EarthquakeLayer({
+  visible,
+  onToggle,
+  eventCount,
+  minMagnitude,
+  onMinMagnitudeChange,
+}: {
+  visible: boolean;
+  onToggle: () => void;
+  eventCount: number;
+  minMagnitude: number;
+  onMinMagnitudeChange: (v: number) => void;
+}) {
+  const [expanded, setExpanded] = useState(false);
+
+  return (
+    <div>
+      <div className="flex items-center gap-2 text-sm text-white/80">
+        <label className="flex items-center gap-2 cursor-pointer hover:text-white transition-colors flex-1">
+          <input
+            type="checkbox"
+            checked={visible}
+            onChange={onToggle}
+            className="accent-orange-500"
+          />
+          Earthquakes
+          <span className="ml-auto text-xs bg-white/10 rounded-full px-2 py-0.5 text-white/50">
+            {eventCount}
+          </span>
+        </label>
+        {visible && (
+          <button
+            onClick={() => setExpanded((v) => !v)}
+            className="text-white/30 hover:text-white/60 transition-colors text-xs px-1"
+            title={expanded ? "Collapse" : "Expand settings"}
+          >
+            {expanded ? "▾" : "▸"}
+          </button>
+        )}
+      </div>
+      {visible && expanded && (
         <div className="mt-3 pl-6">
           <div className="flex items-center justify-between text-xs text-white/50 mb-1">
             <span>Min magnitude</span>
