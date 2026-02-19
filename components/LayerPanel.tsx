@@ -68,7 +68,7 @@ function EarthquakeLayer({
         {visible && (
           <button
             onClick={() => setExpanded((v) => !v)}
-            className="text-white/30 hover:text-white/60 transition-colors text-xs px-1"
+            className="text-white/30 hover:text-white/60 transition-colors text-base px-1"
             title={expanded ? "Collapse" : "Expand settings"}
           >
             {expanded ? "▾" : "▸"}
