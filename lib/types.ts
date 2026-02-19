@@ -29,6 +29,7 @@ export interface NewsEvent {
   longitude: number;
   time: number;
   tone: number;
+  count?: number;
 }
 
 export interface ConflictEvent {

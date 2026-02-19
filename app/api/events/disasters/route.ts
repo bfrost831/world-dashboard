@@ -20,8 +20,9 @@ export async function GET() {
       const eventType = item["gdacs:eventtype"] ?? "";
       if (SKIP_TYPES.includes(eventType)) continue;
 
-      const lat = parseFloat(item["geo:lat"] ?? item["gdacs:lat"] ?? "0");
-      const lng = parseFloat(item["geo:long"] ?? item["gdacs:long"] ?? "0");
+      const geoPoint = item["geo:Point"] ?? {};
+      const lat = parseFloat(geoPoint["geo:lat"] ?? "0");
+      const lng = parseFloat(geoPoint["geo:long"] ?? "0");
       if (lat === 0 && lng === 0) continue;
 
       const alertLevel = (item["gdacs:alertlevel"] ?? "Green") as DisasterEvent["alertLevel"];
